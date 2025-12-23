@@ -1,5 +1,6 @@
-import dgram from 'node:dgram';
 import { Buffer } from 'node:buffer';
+
+// Ressource très utile (IEEE Standard for Ethernet) : https://www.my-wire.de/schnittstellenbeschreibung/ethernet.pdf
 
 
 const preambleSize = 7 // Pour savoir qu'il s'agit d'un message éthernet
@@ -13,10 +14,10 @@ const frameCheckSequenceSize = 4
 const messageEthernetDataFrameSize = preambleSize + SFDSize + destinationAddressSize + sourceAddressSize + lengthTypeSize + macClientDataSize + frameCheckSequenceSize
 
 
-const preambleOctet = 0b10101010  // cf page 75
+const preambleOctet = 0b10101010  // cf page 129 du PDF
 
 // Créer le message à envoyer
-// https://www.my-wire.de/schnittstellenbeschreibung/ethernet.pdf page 107 du pdf
+// page 107 du pdf
 
 /**
  * Envoie le message encapsulé dans une frame éthernet

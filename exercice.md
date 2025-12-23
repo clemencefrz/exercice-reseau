@@ -7,3 +7,4 @@ ressource : page 53 de https://www.my-wire.de/schnittstellenbeschreibung/etherne
 TO DO : 
 - Finir le dataframe et l'extraire vraiment (wrapEthernet, unwrapEthernet)
 - Implémenter le système de vérification (crc)
+- Refaire la même chose en Rust
