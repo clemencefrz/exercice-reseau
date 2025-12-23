@@ -1,4 +1,5 @@
 import dgram from 'node:dgram';
+import { unwrapEthernet } from './ethernet.js';
 
 const server = dgram.createSocket('udp4');
 
@@ -8,7 +9,7 @@ server.on('error', (err) => {
 });
 
 server.on('message', (msg, rinfo) => {
-  console.log(`server got: ${msg} from ${rinfo.address}:${rinfo.port}`);
+  console.log(`server got:`, unwrapEthernet(msg));
 });
 
 server.on('listening', () => {
