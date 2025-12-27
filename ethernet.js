@@ -76,6 +76,10 @@ export function wrapEthernet(macClientData, destinationAddress, sourceAddress) {
     }
     lengthTypeField.copy(messageEthernetDataFrame, preambleSize + SFDSize + 2*MACAddressSize)
 
+    // MAC Client Data
+
+    macClientData.copy(messageEthernetDataFrame, preambleSize + SFDSize + 2*MACAddressSize + lengthTypeSize)
+
     return messageEthernetDataFrame
 }
 
@@ -123,7 +127,9 @@ export function unwrapEthernet(messageEthernetDataFrame, myMACAddress) {
         throw new Error("Type Interpretation not implemented.")
     }
 
-    //TODO : récupérer le macclientdata grâce au nombre d'octet de lgength
+    const MACClientDataReceived = messageEthernetDataFrame.subarray(preambleSize+SFDSize+2*MACAddressSize+lengthTypeSize,preambleSize+SFDSize+2*MACAddressSize+lengthTypeSize+numberLengthTypeFieldReceived)
+
+    console.log("MACClientDataReceived", MACClientDataReceived, MACClientDataReceived.toString())
 
     return messageEthernetDataFrame
     }
