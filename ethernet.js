@@ -46,10 +46,11 @@ function estMACAdress(x) {
  * @param {Buffer} macClientData
  * @param {MACAddress} destinationAddress // doit faire 6 octets p109
  * @param {MACAddress} sourceAddress
+ * @param {Buffer} lengthTypeField // doit faire 2 octets
  * @returns {Buffer}
  */
-export function wrapEthernet(macClientData, destinationAddress, sourceAddress) {
-    const messageEthernetDataFrame = Buffer.alloc(messageEthernetDataFrameSize)
+export function wrapEthernet(macClientData, destinationAddress, sourceAddress, lengthTypeField) {
+    const messageEthernetDataFrame = Buffer.alloc(messageEthernetDataFrameSize) //TODO: cette taille devrait être dynamique, calculée en fonction du message envoyé
 
     // Préambule
     for (let i=0; i < preambleSize; i++) {
@@ -70,7 +71,12 @@ export function wrapEthernet(macClientData, destinationAddress, sourceAddress) {
     }
     sourceAddress.copy(messageEthernetDataFrame, preambleSize + SFDSize + MACAddressSize)
 
-    
+    // Length/Type field
+    if (lengthTypeField.length !==2) {
+        throw new Error("La valeur Length/Type Field n'a pas la bonne taille : ", lengthTypeField.length)
+    }
+
+    lengthTypeField.copy(messageEthernetDataFrame, preambleSize + SFDSize + 2*MACAddressSize)
 
     return messageEthernetDataFrame
 }
@@ -78,9 +84,10 @@ export function wrapEthernet(macClientData, destinationAddress, sourceAddress) {
 /**
  * 
  * @param {Buffer} messageEthernetDataFrame
+ * @param {Buffer} myMACAddress
  * @returns {Buffer}
  */
-export function unwrapEthernet(messageEthernetDataFrame) {
+export function unwrapEthernet(messageEthernetDataFrame, myMACAddress) {
     for (let i=0; i < preambleSize; i++) {
         if (messageEthernetDataFrame[i] != preambleOctet) {
             throw new Error(`L'octet n°${i} du préambule n'a pas la bonne valeur.`)
@@ -92,12 +99,33 @@ export function unwrapEthernet(messageEthernetDataFrame) {
     }
 
     const destinationAddressReceived = messageEthernetDataFrame.subarray(preambleSize+SFDSize, preambleSize+SFDSize+MACAddressSize)
-
     const sourceAddressReceived = messageEthernetDataFrame.subarray(preambleSize+SFDSize+MACAddressSize, preambleSize+SFDSize+2*MACAddressSize)
 
+    if (!estMACAdress(myMACAddress)) {
+        throw new Error("Votre MAC adresse n'a pas le bon format.", myMACAddress)
+    }
+
     console.log("destinationAddressReceived", destinationAddressReceived)
+    if (myMACAddress.compare(destinationAddressReceived) !== 0 && broadcastAddress.compare(destinationAddressReceived) !==0) {
+        throw new Error("Ce message ne vous est pas adressé. On l'ignore.")
+    }
 
     console.log("sourceAddressReceived", sourceAddressReceived)
+
+    const lengthTypeFieldReceived = messageEthernetDataFrame.subarray(preambleSize+SFDSize+2*MACAddressSize, preambleSize+SFDSize+2*MACAddressSize+lengthTypeSize)
+
+
+    console.log("lengthTypeFieldReceived", lengthTypeFieldReceived)
+    const numberLengthTypeFieldReceived = lengthTypeFieldReceived.readInt16BE()
+    if (numberLengthTypeFieldReceived>1500 && numberLengthTypeFieldReceived<1536 ) {
+        throw new RangeError("Le Length/Type Field reçu ne peut pas être interprété.", numberLengthTypeFieldReceived)
+    }
+
+    if (numberLengthTypeFieldReceived>=1536) {
+        throw new Error("Type Interpretation not implemented.")
+    }
+
+    //TODO : récupérer le macclientdata grâce au nombre d'octet de lgength
 
     return messageEthernetDataFrame
     }
