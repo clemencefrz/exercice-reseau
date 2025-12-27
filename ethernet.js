@@ -15,7 +15,9 @@ const messageEthernetDataFrameSize = preambleSize + SFDSize + MACAddressSize + s
 
 
 const preambleOctet = 0b10101010  // cf page 129 du PDF
+const SFDOctet = 0b10101011
 
+export const broadcastAddress = Buffer.from([0xff, 0xff, 0xff, 0xff, 0xff, 0xff])
 
 /**
  * @typedef {Buffer} MACAddress
@@ -27,9 +29,11 @@ const preambleOctet = 0b10101010  // cf page 129 du PDF
  */
 function estMACAdress(x) {
     if (!Buffer.isBuffer(x)) {
+        console.log(`pas un buffer`)
         return false
     }
-    if (x.size !== MACAddressSize) {
+    if (x.length !== MACAddressSize) {
+        console.log(`pas la bonne taille: ${x.length}`)
         return false
     }
     return true;
@@ -41,9 +45,10 @@ function estMACAdress(x) {
  * Envoie le message encapsulé dans une frame éthernet
  * @param {Buffer} macClientData
  * @param {MACAddress} destinationAddress // doit faire 6 octets p109
+ * @param {MACAddress} sourceAddress
  * @returns {Buffer}
  */
-export function wrapEthernet(macClientData, destinationAddress) {
+export function wrapEthernet(macClientData, destinationAddress, sourceAddress) {
     const messageEthernetDataFrame = Buffer.alloc(messageEthernetDataFrameSize)
 
     // Préambule
@@ -52,15 +57,19 @@ export function wrapEthernet(macClientData, destinationAddress) {
     }
 
     // SFD
-    messageEthernetDataFrame[preambleSize] = 0b10101011
+    messageEthernetDataFrame[preambleSize] = SFDOctet
 
     // Destination address
     if (!estMACAdress(destinationAddress)) {
         throw new Error(`Le format de l'adresse de destination est incorrect : ${destinationAddress}`)
     }
     destinationAddress.copy(messageEthernetDataFrame, preambleSize + SFDSize)
+    // Source address
+    if (!estMACAdress(sourceAddress)) {
+        throw new Error(`Le format de l'adresse source est incorrect : ${sourceAddress}`)
+    }
+    sourceAddress.copy(messageEthernetDataFrame, preambleSize + SFDSize + MACAddressSize)
 
-    
     
 
     return messageEthernetDataFrame
@@ -73,9 +82,22 @@ export function wrapEthernet(macClientData, destinationAddress) {
  */
 export function unwrapEthernet(messageEthernetDataFrame) {
     for (let i=0; i < preambleSize; i++) {
-    if (messageEthernetDataFrame[i] != preambleOctet) {
-        throw new Error(`L'octet n°${i} du préambule n'a pas la bonne valeur.`)
+        if (messageEthernetDataFrame[i] != preambleOctet) {
+            throw new Error(`L'octet n°${i} du préambule n'a pas la bonne valeur.`)
+        }
     }
+    
+    if (messageEthernetDataFrame[preambleSize] !== SFDOctet) {
+        throw new Error(`L'octet du SFD n'a pas la bonne valeur.`)
+    }
+
+    const destinationAddressReceived = messageEthernetDataFrame.subarray(preambleSize+SFDSize, preambleSize+SFDSize+MACAddressSize)
+
+    const sourceAddressReceived = messageEthernetDataFrame.subarray(preambleSize+SFDSize+MACAddressSize, preambleSize+SFDSize+2*MACAddressSize)
+
+    console.log("destinationAddressReceived", destinationAddressReceived)
+
+    console.log("sourceAddressReceived", sourceAddressReceived)
+
     return messageEthernetDataFrame
-  }
-}
+    }

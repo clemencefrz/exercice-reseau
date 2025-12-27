@@ -1,10 +1,17 @@
 import dgram from 'node:dgram';
-import { wrapEthernet } from './ethernet.js';
+import { wrapEthernet, broadcastAddress } from './ethernet.js';
+import os from 'node:os'
 
 const client = dgram.createSocket('udp4');
 
-const message = wrapEthernet(Buffer.from('Coucou'))
+// Adresse mac de ma machine
+const addressSource = os.networkInterfaces()['en0'][0].mac
 
+const bufferParsedAddressSource = Buffer.from(addressSource.split(':').map((hexaString) => parseInt(hexaString, 16)))
+
+const bufferMessagePourEnvoi = Buffer.from('Coucou')
+const message = wrapEthernet(bufferMessagePourEnvoi, broadcastAddress, bufferParsedAddressSource)
+console.log("Voilà ce qu'on a envoyé (message) : ", message)
 client.send(message, 41234, '0.0.0.0', (err) => { // '0.0.0.0' -> on envoie à tout le monde
   client.close();
 });
