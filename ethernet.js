@@ -2,16 +2,13 @@ import { Buffer } from 'node:buffer';
 
 // Ressource très utile (IEEE Standard for Ethernet) : https://www.my-wire.de/schnittstellenbeschreibung/ethernet.pdf
 
-
 const preambleSize = 7 // Pour savoir qu'il s'agit d'un message éthernet
 const SFDSize = 1
 const MACAddressSize = 6
-const sourceAddressSize = 6
 const lengthTypeSize = 2
-const macClientDataSize = 1500 // Vraie donnée qu'on veut envoyer
+// const macClientDataSize = 1500 // Vraie donnée qu'on veut envoyer
 // const padSize = ??
 const frameCheckSequenceSize = 4
-const messageEthernetDataFrameSize = preambleSize + SFDSize + MACAddressSize + sourceAddressSize + lengthTypeSize + macClientDataSize + frameCheckSequenceSize
 
 
 const preambleOctet = 0b10101010  // cf page 129 du PDF
@@ -46,11 +43,13 @@ function estMACAdress(x) {
  * @param {Buffer} macClientData
  * @param {MACAddress} destinationAddress // doit faire 6 octets p109
  * @param {MACAddress} sourceAddress
- * @param {Buffer} lengthTypeField // doit faire 2 octets
  * @returns {Buffer}
  */
-export function wrapEthernet(macClientData, destinationAddress, sourceAddress, lengthTypeField) {
-    const messageEthernetDataFrame = Buffer.alloc(messageEthernetDataFrameSize) //TODO: cette taille devrait être dynamique, calculée en fonction du message envoyé
+export function wrapEthernet(macClientData, destinationAddress, sourceAddress) {
+    const lengthTypeField = Buffer.alloc(lengthTypeSize)
+    lengthTypeField.writeInt16BE(macClientData.length)
+
+    const messageEthernetDataFrame = Buffer.alloc(preambleSize + SFDSize + MACAddressSize + MACAddressSize + macClientData.length + frameCheckSequenceSize)
 
     // Préambule
     for (let i=0; i < preambleSize; i++) {
@@ -75,7 +74,6 @@ export function wrapEthernet(macClientData, destinationAddress, sourceAddress, l
     if (lengthTypeField.length !==2) {
         throw new Error("La valeur Length/Type Field n'a pas la bonne taille : ", lengthTypeField.length)
     }
-
     lengthTypeField.copy(messageEthernetDataFrame, preambleSize + SFDSize + 2*MACAddressSize)
 
     return messageEthernetDataFrame
